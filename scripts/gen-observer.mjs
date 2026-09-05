@@ -10,6 +10,10 @@
  *     waitUntil 异步上报 {site, bot_id, url, ts} 到 OBSERVE_ENDPOINT；
  *   - 人类流量零记录、零感知；上报失败静默，永不影响主站响应。
  *
+ * 特殊分支：目标站点为 geoloopos.com 时（2026-09-06「半移分叉 A」），
+ *   站点函数还承担「动态层反代到 origin 容器」——此时只刷新既有
+ *   functions/_middleware.js 的爬虫表，不整体覆盖（反代逻辑为手写维护）。
+ *
  * 环境变量（在目标站 Pages 项目上配置）：
  *   OBSERVE_ENDPOINT  如 https://geoloopos.com/api/observe
  *   OBSERVE_TOKEN     与接收器共享的 Bearer token
@@ -17,7 +21,7 @@
  * 用法：node scripts/gen-observer.mjs [目标站点仓库根目录]
  * 幂等：重复运行覆盖产出。识别表更新后重跑本脚本 + 重新部署目标站即可。
  */
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import path from "node:path";
 
 const ROOT = path.resolve(process.cwd());
@@ -71,5 +75,22 @@ export async function onRequest({ request, env, next, waitUntil }) {
 
 const outDir = path.join(TARGET, "functions");
 mkdirSync(outDir, { recursive: true });
-writeFileSync(path.join(outDir, "_middleware.js"), file);
-console.log(`✓ 已生成 ${path.join(outDir, "_middleware.js")}（站点 ${SITE} · ${flat.length} 条匹配规则）`);
+const outFile = path.join(outDir, "_middleware.js");
+
+if (SITE === "geoloopos.com") {
+  // 「半移分叉 A」站点：中间件 = 观测上报 + 动态层反代（手写维护）。
+  // 这里只做幂等性刷新——重写头部说明 + 内联新爬虫表，其余逻辑原样保留。
+  if (!existsSync(outFile)) {
+    console.error(`✗ ${outFile} 不存在（geoloopos 站点请勿用纯观测模板生成，需含反代逻辑）`);
+    process.exit(1);
+  }
+  let cur = readFileSync(outFile, "utf8");
+  cur = cur.replace(/^\/\/ 数据源：.*$/m, `// 数据源：geoloopos/data/bots.json（${bots.length} 个爬虫 · ${flat.length} 条匹配规则）`);
+  cur = cur.replace(/const BOTS = \[[^\n]*\];/, `const BOTS = ${JSON.stringify(flat)};`);
+  writeFileSync(outFile, cur);
+  console.log(`✓ 已刷新 ${outFile}（站点 ${SITE} · 仅更新爬虫表，反代逻辑保留）`);
+  process.exit(0);
+}
+
+writeFileSync(outFile, file);
+console.log(`✓ 已生成 ${outFile}（站点 ${SITE} · ${flat.length} 条匹配规则）`);

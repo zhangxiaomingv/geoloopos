@@ -14,3 +14,6 @@ data/*
 # Cloudflare Pages 构建产物
 _worker.bundle
 .wrangler/
+
+# Cloudflare Pages 打包产物（半移分叉 A，node scripts/build-pages.mjs 生成）
+.pages/

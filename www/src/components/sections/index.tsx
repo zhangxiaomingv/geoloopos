@@ -10,6 +10,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FreeCheck } from "@/components/FreeCheck";
 import {
   nav,
   hero,
@@ -159,18 +160,7 @@ export function Hero() {
             {hero.sub}
           </p>
         </Reveal>
-        <Reveal delay={260}>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <ShimmerLink href={hero.ctaPrimary.href}>{hero.ctaPrimary.label}</ShimmerLink>
-            <GhostLink href={hero.ctaGhost.href}>{hero.ctaGhost.label}</GhostLink>
-          </div>
-        </Reveal>
-        <Reveal delay={340}>
-          <p className="mt-9 flex items-center justify-center gap-2 font-mono text-[11.5px] tracking-[0.06em] text-faint">
-            <span aria-hidden className="inline-block size-1.5 animate-pulse rounded-full bg-[#34d399]" />
-            DEEPSEEK · DOUBAO · OX ALPHA 实时可测
-          </p>
-        </Reveal>
+        <FreeCheck compact />
       </div>
     </section>
   );

@@ -74,7 +74,7 @@ function statusBadge(e: EngineRep): { text: string; cls: string } {
   }
 }
 
-export function FreeCheck() {
+export function FreeCheck({ compact = false }: { compact?: boolean } = {}) {
   const [query, setQuery] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
   const [stage, setStage] = useState("");
@@ -149,22 +149,25 @@ export function FreeCheck() {
   };
 
   return (
-    <section className="mx-auto max-w-6xl px-5 pt-14 md:pt-20">
+    <section className={compact ? "relative mx-auto mt-10 w-full max-w-[680px] text-left" : "mx-auto max-w-6xl px-5 pt-14 md:pt-20"}>
+      {!compact && (
+        <Reveal>
+          <div className="text-center">
+            <p className="mb-3 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[#4c8dff]">
+              Free Real-time Check · 真联网盲测
+            </p>
+            <h2 className="text-[clamp(22px,3.4vw,30px)] font-bold tracking-[-0.02em]">
+              查一下 AI 眼里有没有你
+            </h2>
+            <p className="mx-auto mt-3 max-w-[520px] text-[13.5px] leading-7 text-muted-foreground">
+              输入品牌名或官网域名，我们用真实用户会问的问题让 DeepSeek 联网作答——不告诉它你是谁，
+              测出来才算数。豆包在充值后自动接入。
+            </p>
+          </div>
+        </Reveal>
+      )}
       <Reveal>
-        <div className="text-center">
-          <p className="mb-3 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[#4c8dff]">
-            Free Real-time Check · 真联网盲测
-          </p>
-          <h2 className="text-[clamp(22px,3.4vw,30px)] font-bold tracking-[-0.02em]">
-            查一下 AI 眼里有没有你
-          </h2>
-          <p className="mx-auto mt-3 max-w-[520px] text-[13.5px] leading-7 text-muted-foreground">
-            输入品牌名或官网域名，我们用真实用户会问的问题让 DeepSeek 联网作答——不告诉它你是谁，
-            测出来才算数。豆包在充值后自动接入。
-          </p>
-        </div>
-
-        <GradientBorder className="mt-8 rounded-[22px]" innerClassName="rounded-[inherit] bg-[#0b0b10]">
+        <GradientBorder className={cn("rounded-[22px]", compact ? "" : "mt-8")} innerClassName="rounded-[inherit] bg-[#0b0b10]">
           <div className="p-5 sm:p-7">
             {/* 输入行 */}
             <div className="flex flex-col gap-2.5 sm:flex-row">

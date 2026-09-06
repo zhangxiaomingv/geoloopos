@@ -1,5 +1,4 @@
 import { PageBg } from "@/components/effects";
-import { FreeCheck } from "@/components/FreeCheck";
 import {
   Topbar,
   Hero,
@@ -25,7 +24,6 @@ export default function App() {
         <Topbar />
         <main>
           <Hero />
-          <FreeCheck />
           <ProcessLoop />
           <BentoFeatures />
           <MediaShowcase />

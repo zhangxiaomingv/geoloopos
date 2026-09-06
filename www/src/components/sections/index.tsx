@@ -156,7 +156,7 @@ export function Hero() {
           </h1>
         </Reveal>
         <Reveal delay={180}>
-          <p className="mx-auto mt-6 max-w-[560px] text-[15.5px] leading-[1.8] tracking-[0.002em] text-[#b8b9c3]">
+          <p className="mx-auto mt-6 max-w-[620px] text-[15.5px] leading-[1.8] tracking-[0.002em] text-[#b8b9c3]">
             {hero.sub}
           </p>
         </Reveal>

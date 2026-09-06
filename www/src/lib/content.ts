@@ -34,7 +34,7 @@ export const hero = {
   badge: "AI 可见度增长闭环系统",
   h1Pre: "让 AI ",
   h1Shine: "认识你、理解你、推荐你",
-  sub: "GEOloopOS 是企业在 AI 搜索时代的数字身份基础设施，让 AI 理解企业/个体、准确描述企业/个人，并持续增强企业/个体在 AI 决策链中的影响力。",
+  sub: "从基础搭建，到持续迭代，让企业建立一套可被 AI 理解、识别、信任与引用的数字基础设施。",
   ctaPrimary: { href: "/app", label: "免费检测 →" },
   ctaGhost: { href: "/deploy", label: "企业私有部署" },
 };

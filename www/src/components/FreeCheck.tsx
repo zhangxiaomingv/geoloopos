@@ -5,7 +5,7 @@
  * 报告渲染对齐 Profound/Otterly 免费报告骨架：分层可见度 + 可下钻证据 + 缺口定位。
  */
 import { useEffect, useState } from "react";
-import { ArrowRight, ChevronDown, ExternalLink, RotateCw, Search, ShieldCheck } from "lucide-react";
+import { ArrowRight, ChevronDown, ExternalLink, Globe, RotateCw, Search, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { GradientBorder, Reveal, ShimmerLink, SpotlightCard } from "@/components/effects";
 
@@ -49,6 +49,34 @@ interface Report {
   honest: string;
 }
 
+/* ---- POST /api/audit（结构层 withCheck:false）响应最小镜像 ---- */
+interface AuditItemMini {
+  id: string;
+  label: string;
+  max: number;
+  score: number;
+  status: "pass" | "partial" | "fail";
+  detail: string;
+}
+interface AuditActionMini {
+  level: "P0" | "P1" | "P2";
+  title: string;
+  desc: string;
+}
+interface SiteAuditMini {
+  score: number;
+  verdict: string;
+  blockedBots: string[];
+  htmlChars: number;
+  items: AuditItemMini[];
+  actions: AuditActionMini[];
+}
+interface AuditState {
+  loading: boolean;
+  error?: string;
+  data?: SiteAuditMini;
+}
+
 type Phase = "idle" | "running" | "done" | "error";
 
 const SCORE_COLOR = (s: number) => (s >= 80 ? "#34d399" : s >= 55 ? "#4c8dff" : s >= 25 ? "#f5a623" : "#f0516b");
@@ -82,6 +110,7 @@ export function FreeCheck({ compact = false }: { compact?: boolean } = {}) {
   const [err, setErr] = useState("");
   const [open, setOpen] = useState<Record<number, boolean>>({});
   const [jobId, setJobId] = useState<string | null>(null);
+  const [audit, setAudit] = useState<AuditState>({ loading: false });
 
   useEffect(() => {
     if (!jobId) return;
@@ -95,6 +124,41 @@ export function FreeCheck({ compact = false }: { compact?: boolean } = {}) {
           clearInterval(timer);
           setReport(j.report);
           setPhase("done");
+          // 可见度报告出来后，顺手拉「官网 AI 可读性体检」（结构层，秒出、不烧 LLM）
+          const dom = j.report && typeof j.report.domain === "string" ? j.report.domain : "";
+          if (!dom) {
+            setAudit({ loading: false });
+          } else {
+            setAudit({ loading: true });
+            fetch("/api/audit", {
+              method: "POST",
+              headers: { "content-type": "application/json", accept: "application/json" },
+              body: JSON.stringify({ url: dom, withCheck: false }),
+            })
+              .then(async (resp) => {
+                const b = await resp.json().catch(() => ({}));
+                if (stopped) return;
+                const rep = b && b.ok && b.report ? b.report : null;
+                if (!rep) {
+                  setAudit({ loading: false, error: (b && b.message) || "官网体检暂不可用" });
+                  return;
+                }
+                setAudit({
+                  loading: false,
+                  data: {
+                    score: rep.score,
+                    verdict: rep.verdict,
+                    blockedBots: rep.audit ? rep.audit.blockedBots ?? [] : [],
+                    htmlChars: rep.audit ? rep.audit.htmlChars ?? 0 : 0,
+                    items: rep.audit ? rep.audit.items ?? [] : [],
+                    actions: rep.actions ?? [],
+                  },
+                });
+              })
+              .catch(() => {
+                if (!stopped) setAudit({ loading: false, error: "官网体检失败，请重试" });
+              });
+          }
         } else if (j.status === "error") {
           clearInterval(timer);
           setErr(j.error || "检测失败，请稍后再试");
@@ -120,6 +184,7 @@ export function FreeCheck({ compact = false }: { compact?: boolean } = {}) {
     setErr("");
     setReport(null);
     setJobId(null);
+    setAudit({ loading: false });
     try {
       const r = await fetch("/api/detect", {
         method: "POST",
@@ -146,6 +211,7 @@ export function FreeCheck({ compact = false }: { compact?: boolean } = {}) {
     setReport(null);
     setJobId(null);
     setErr("");
+    setAudit({ loading: false });
   };
 
   return (
@@ -202,19 +268,6 @@ export function FreeCheck({ compact = false }: { compact?: boolean } = {}) {
               </button>
             </div>
 
-            {/* 引擎 chips */}
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 font-mono text-[11px] text-faint">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="inline-block size-1.5 animate-pulse rounded-full bg-[#34d399]" />
-                DeepSeek · 联网实时
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="inline-block size-1.5 rounded-full bg-[#f5a623]" />
-                豆包 · 充值后接入
-              </span>
-              <span className="hidden sm:inline">不告诉 AI 被测对象，结果不作假</span>
-            </div>
-
             {/* 运行中：阶段提示 */}
             {phase === "running" && (
               <div className="mt-5 flex items-center gap-3 rounded-xl border border-[rgba(76,141,255,.22)] bg-[rgba(76,141,255,.07)] px-4 py-3 text-[13px] text-[#8ab6ff]">
@@ -236,7 +289,9 @@ export function FreeCheck({ compact = false }: { compact?: boolean } = {}) {
             )}
 
             {/* 报告 */}
-            {phase === "done" && report && <ReportCard report={report} open={open} setOpen={setOpen} onReset={recheck} />}
+            {phase === "done" && report && (
+              <ReportCard report={report} open={open} setOpen={setOpen} onReset={recheck} audit={audit} />
+            )}
           </div>
         </GradientBorder>
       </Reveal>
@@ -250,11 +305,13 @@ function ReportCard({
   open,
   setOpen,
   onReset,
+  audit,
 }: {
   report: Report;
   open: Record<number, boolean>;
   setOpen: (f: (p: Record<number, boolean>) => Record<number, boolean>) => void;
   onReset: () => void;
+  audit: AuditState;
 }) {
   const okEngines = report.engines.filter((e) => e.status === "ok");
   const others = report.engines.filter((e) => e.status !== "ok");
@@ -324,6 +381,9 @@ function ReportCard({
           );
         })}
       </div>
+
+      {/* 官网 AI 可读性体检（结构层，随报告附赠） */}
+      {audit && <AuditPanel audit={audit} />}
 
       {/* 证据面 */}
       <details className="mt-4 rounded-2xl border border-white/8 bg-white/[0.02] open:pb-2">
@@ -454,6 +514,124 @@ function EngineBars({ e }: { e: EngineRep }) {
       })}
     </div>
   );
+}
+
+/* ---------------- 官网 AI 可读性体检（结构层） ---------------- */
+function AuditPanel({ audit }: { audit: AuditState }) {
+  if (audit.loading) {
+    return (
+      <div className="mt-4 flex items-center gap-2.5 rounded-2xl border border-white/8 bg-white/[0.02] px-4 py-3 text-[12.5px] text-faint">
+        <Globe size={14} className="shrink-0 animate-pulse text-[#7db4ff]" />
+        正在体检官网（robots / llms.txt / 结构化数据 / 纯 HTML 可读量）…
+      </div>
+    );
+  }
+  if (!audit.data) return null;
+  const a = audit.data;
+  const color = SCORE_COLOR(a.score);
+  const keyItems = a.items.filter((i) =>
+    ["robots", "content", "llms", "jsonld", "sitemap", "meta"].includes(i.id)
+  );
+  const acts = a.actions.filter((x) => x.level !== "P2").slice(0, 2);
+  const dot = (s: string) => (s === "pass" ? "✓" : s === "partial" ? "◐" : "✗");
+  const dotCls = (s: string) =>
+    s === "pass"
+      ? "border-[rgba(52,211,153,.3)] bg-[rgba(52,211,153,.08)] text-[#34d399]"
+      : s === "partial"
+        ? "border-[rgba(245,166,35,.3)] bg-[rgba(245,166,35,.08)] text-[#f5a623]"
+        : "border-[rgba(240,81,107,.35)] bg-[rgba(240,81,107,.08)] text-[#f0516b]";
+  return (
+    <div className="mt-4 rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex items-center gap-2 text-[13px] font-bold">
+          <Globe size={14} className="text-[#7db4ff]" />
+          官网 AI 可读性体检
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="hidden font-mono text-[10px] text-faint sm:inline">结构层 · 秒出</span>
+          <span
+            className="rounded-full px-2.5 py-0.5 font-mono text-[12.5px] font-semibold"
+            style={{ color, border: `1px solid ${color}40`, background: `${color}14` }}
+            aria-label={`官网可读性 ${a.score} 分`}
+          >
+            {a.score}
+          </span>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {keyItems.map((i) => (
+          <span
+            key={i.id}
+            title={i.detail}
+            className={cn("inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[10.5px]", dotCls(i.status))}
+          >
+            {dot(i.status)} {auditLabel(i.id)}
+          </span>
+        ))}
+      </div>
+      {a.blockedBots.length > 0 && (
+        <p className="mt-2.5 text-[12px] leading-5 text-[#f0516b]">
+          ⚠ robots.txt 封锁了 {a.blockedBots.length} 个 AI 爬虫（{a.blockedBots.join("、")}）
+        </p>
+      )}
+      {acts.length > 0 && (
+        <ul className="mt-2.5 space-y-1.5">
+          {acts.map((x, i) => (
+            <li key={i} className="flex items-start gap-2 text-[12px] leading-5 text-muted-foreground">
+              <span
+                className={cn(
+                  "mt-px shrink-0 rounded px-1 font-mono text-[9.5px] font-semibold",
+                  x.level === "P0"
+                    ? "bg-[rgba(240,81,107,.16)] text-[#f0516b]"
+                    : "bg-[rgba(245,166,35,.16)] text-[#f5a623]"
+                )}
+              >
+                {x.level}
+              </span>
+              <span>{x.title}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {a.actions.length > 2 && (
+        <details className="mt-1">
+          <summary className="cursor-pointer list-none text-[11.5px] text-[#4c8dff] [&::-webkit-details-marker]:hidden">
+            展开全部 {a.actions.length} 条行动项
+          </summary>
+          <ul className="mt-1.5 space-y-1.5">
+            {a.actions.map((x, i) => (
+              <li key={i} className="text-[12px] leading-5 text-muted-foreground">
+                <b className="text-foreground">[{x.level}] {x.title}</b>
+                <span className="text-faint"> — {x.desc}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <p className="mt-2.5 font-mono text-[10px] leading-4 text-faint">
+        用 AI 爬虫视角抓官网（不执行 JS）。可读性高 ≠ AI 一定引用你——被识别/被引用见上方证据面。
+      </p>
+    </div>
+  );
+}
+
+function auditLabel(id: string): string {
+  switch (id) {
+    case "robots":
+      return "robots";
+    case "content":
+      return "HTML 内容";
+    case "llms":
+      return "llms.txt";
+    case "jsonld":
+      return "JSON-LD";
+    case "sitemap":
+      return "sitemap";
+    case "meta":
+      return "标题结构";
+    default:
+      return id;
+  }
 }
 
 function Tag({ ok, label }: { ok: boolean; label: string }) {

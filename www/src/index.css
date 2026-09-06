@@ -1,0 +1,385 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/space-grotesk";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   GEOloopOS 营销大页 · React 焕新版
+   风格：深色电影感 × Aceternity 光效（明显焕新但保克制质感）
+   单色板策略：shadcn 语义 token 直接 = GEOloopOS 色板字面值
+   （无 @theme inline 间接映射、无 .dark 亮色块、无 Geist 自引用）
+   ============================================================ */
+
+@theme {
+  /* 字体 —— CJK 优先字面栈，不下载任何 webfont */
+  --font-sans: "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei",
+    "HarmonyOS Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono",
+    Consolas, Menlo, monospace;
+  /* 品牌字标专用：自托管 Space Grotesk（OFL，仅拉丁，无 CJK 字形→中文回落栈） */
+  --font-brand: "Space Grotesk Variable", "PingFang SC", "Noto Sans CJK SC",
+    "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+
+  /* —— 面板 —— */
+  --color-background: #0a0a0b;
+  --color-foreground: #f5f5f6;
+  --color-card: #101013;
+  --color-card-foreground: #f5f5f6;
+  --color-popover: #16161a;
+  --color-popover-foreground: #f5f5f6;
+  --color-secondary: #1d1d24;
+  --color-secondary-foreground: #f5f5f6;
+  --color-muted: #16161a;
+  --color-muted-foreground: #a1a1aa;
+
+  /* —— 品牌（shadcn 语义 = GEOloopOS 值） —— */
+  --color-primary: #2563eb;
+  --color-primary-foreground: #ffffff;
+  --color-accent: #4c8dff;
+  --color-accent-foreground: #0a0a0b;
+  --color-ring: #4c8dff;
+  --color-border: rgba(255, 255, 255, 0.16);
+  --color-input: rgba(255, 255, 255, 0.14);
+  --color-destructive: #f87171;
+  --color-destructive-foreground: #ffffff;
+
+  /* —— GEOloopOS 扩展语义 —— */
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-danger: #f87171;
+  --color-faint: #76767f;
+  --color-violet: #a78bfa;
+  --color-magenta: #e879f9;
+}
+
+/* 圆角变量（nova 组件里会以 var(--radius-md) 等原样引用） */
+:root {
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 96px;
+}
+html,
+body,
+#root {
+  min-height: 100%;
+}
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: clip;
+}
+::selection {
+  background: var(--color-primary);
+  color: #fff;
+}
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* ---------- 页面背景层（原 body 顶部光晕 → 独立固定层） ---------- */
+.page-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--color-background);
+}
+.page-bg .glow-a {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.5;
+  will-change: transform;
+}
+.page-bg .ga-1 {
+  width: 720px;
+  height: 440px;
+  left: 50%;
+  top: -180px;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgba(76, 141, 255, 0.55), transparent);
+  animation: aurora-drift 26s ease-in-out infinite alternate;
+}
+.page-bg .ga-2 {
+  width: 520px;
+  height: 380px;
+  left: -140px;
+  top: 8%;
+  background: radial-gradient(closest-side, rgba(124, 92, 252, 0.4), transparent);
+  animation: aurora-drift 34s ease-in-out infinite alternate-reverse;
+}
+.page-bg .ga-3 {
+  width: 480px;
+  height: 340px;
+  right: -160px;
+  top: 30%;
+  background: radial-gradient(closest-side, rgba(167, 139, 250, 0.32), transparent);
+  animation: aurora-drift 40s ease-in-out infinite alternate;
+}
+.page-bg .beam {
+  position: absolute;
+  top: -12%;
+  height: 150%;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, rgba(76, 141, 255, 0.35), transparent);
+  transform: rotate(24deg);
+  opacity: 0.5;
+  animation: beam-sway 18s ease-in-out infinite alternate;
+}
+.page-bg .beam-1 { left: 18%; }
+.page-bg .beam-2 { left: 62%; animation-delay: -9s; }
+.page-bg .bg-dots {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1.6px);
+  background-size: 30px 30px;
+  -webkit-mask-image: radial-gradient(620px 420px at 50% -40px, #000 0%, transparent 78%);
+  mask-image: radial-gradient(620px 420px at 50% -40px, #000 0%, transparent 78%);
+}
+@keyframes aurora-drift {
+  0% { translate: 0 0 scale(1); }
+  50% { translate: 30px 22px scale(1.06); }
+  100% { translate: -26px 10px scale(1.02); }
+}
+@keyframes beam-sway {
+  0% { translate: 0 0; }
+  100% { translate: 26px 0; }
+}
+
+/* ---------- Reveal（IO 淡入上移） ---------- */
+.rv {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) var(--d, 0s);
+  will-change: opacity, transform;
+}
+.rv.in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- SpotlightCard 鼠标聚光 ---------- */
+.spot {
+  position: relative;
+  overflow: hidden;
+}
+.spot .spot-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  background: radial-gradient(
+    320px circle at var(--x, 50%) var(--y, 0%),
+    rgba(76, 141, 255, 0.16),
+    transparent 62%
+  );
+}
+.spot .spot-edge {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  box-shadow: inset 0 0 0 1px rgba(76, 141, 255, 0.16);
+  border-radius: inherit;
+}
+@media (hover: hover) and (pointer: fine) {
+  .spot:hover .spot-glow,
+  .spot:hover .spot-edge {
+    opacity: 1;
+  }
+}
+.spot > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- GradientBorder 流光边（@property 旋转 conic） ---------- */
+@property --gb-a {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.gb {
+  position: relative;
+  border-radius: var(--radius-xl, 20px);
+  overflow: hidden;
+  isolation: isolate;
+}
+.gb::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--gb-a),
+    rgba(76, 141, 255, 0) 0%,
+    rgba(76, 141, 255, 0.85) 12%,
+    rgba(167, 139, 250, 0.7) 22%,
+    rgba(76, 141, 255, 0) 40%,
+    rgba(76, 141, 255, 0) 60%,
+    rgba(76, 141, 255, 0.28) 78%,
+    rgba(76, 141, 255, 0) 100%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: gb-spin 7s linear infinite;
+  pointer-events: none;
+}
+.gb > * {
+  position: relative;
+  z-index: 1;
+}
+@keyframes gb-spin {
+  to { --gb-a: 360deg; }
+}
+
+/* ---------- ShineText 渐变扫光字（原 .hl 移植） ---------- */
+.sh-hl {
+  display: inline-block;
+  background-image:
+    linear-gradient(100deg, rgba(255, 255, 255, 0) 42%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0) 58%),
+    linear-gradient(120deg, #4c8dff 0%, #a78bfa 55%, #e879f9 100%);
+  background-size: 300% 100%, 100% 100%;
+  background-position: 100% 0, 0 0;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: sh-sweep 18s ease-in-out infinite;
+}
+@keyframes sh-sweep {
+  0% { background-position: 130% 0, 0 0; }
+  45% { background-position: -30% 0, 0 0; }
+  100% { background-position: -30% 0, 0 0; }
+}
+
+/* ---------- DotGrid 局部点阵（面板/CTA 底） ---------- */
+.dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1.6px);
+  background-size: 24px 24px;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 0%, transparent 72%);
+  mask-image: radial-gradient(ellipse at center, #000 0%, transparent 72%);
+}
+
+/* ---------- ShimmerButton 流光 CTA ---------- */
+.btn-glow {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background-image: linear-gradient(135deg, #2563eb, #4c8dff);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  transition: filter 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease;
+}
+.btn-glow:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 14px 36px rgba(37, 99, 235, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+.btn-glow:active {
+  transform: scale(0.98);
+}
+.btn-glow::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -40%;
+  width: 40%;
+  height: 220%;
+  z-index: 1;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.34), transparent);
+  transform: rotate(18deg);
+  animation: sheen 3.4s ease-in-out infinite;
+}
+.btn-glow > * {
+  position: relative;
+  z-index: 2;
+}
+@keyframes sheen {
+  0% { left: -45%; }
+  55% { left: 130%; }
+  100% { left: 130%; }
+}
+
+/* ---------- 品牌字标（GEOloop + OS） ---------- */
+.brand-lock {
+  font-family: var(--font-brand);
+  font-variation-settings: "wght" 520;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.brand-os {
+  font-family: var(--font-brand);
+  font-variation-settings: "wght" 720;
+  letter-spacing: -0.005em;
+  background-image: linear-gradient(180deg, #7fdcff 0%, #3db4f2 45%, #2563eb 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 14px rgba(61, 156, 242, 0.4));
+  transition: filter 0.2s ease;
+}
+a:hover .brand-os {
+  filter: drop-shadow(0 0 18px rgba(76, 165, 255, 0.6));
+}
+
+/* ---------- 主色文本渐变 · 数字等 ---------- */
+.text-grad {
+  background-image: linear-gradient(120deg, #4c8dff, #a78bfa 60%, #e879f9);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.glow-chip {
+  background: rgba(76, 141, 255, 0.1);
+  border: 1px solid rgba(76, 141, 255, 0.32);
+  box-shadow: 0 0 24px rgba(76, 141, 255, 0.14);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.hairline-b {
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ---------- 移动端兜底 & 动效可及性 ---------- */
+@media (max-width: 768px) {
+  .page-bg .glow-a { filter: blur(46px); opacity: 0.35; }
+  .page-bg .beam { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rv { opacity: 1; transform: none; transition: none; }
+  .sh-hl {
+    animation: none;
+    background-image: linear-gradient(120deg, #4c8dff 0%, #a78bfa 55%, #e879f9 100%);
+  }
+  .gb::before { animation: none; }
+  .btn-glow::after { animation: none; }
+  .page-bg .glow-a,
+  .page-bg .beam { animation: none; }
+}

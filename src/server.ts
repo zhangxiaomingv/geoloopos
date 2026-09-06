@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { runCheck } from "./check.js";
+import { startWebCheck, getWebCheck, loadWebCheck } from "./webcheck.js";
 import { runAudit, listAudits } from "./audit.js";
 import { appendCheck, listChecks, getCheck } from "./history.js";
 import { generateKB, getKB, saveKB, listKBs, runGapAnalysis, type KBInput } from "./kb.js";
@@ -451,6 +452,58 @@ const server = createServer(async (req, res) => {
     } finally {
       runningChecks--;
     }
+    return;
+  }
+
+  // ============ 真检测（营销免费检测 · 盲测联网口径，公网公开） ============
+  // POST /api/detect {query} → 后台跑盲测真检测，秒回 jobId；GET /api/detect/{id} → 轮询结果
+  // 通道：DeepSeek/豆包 Responses API + web_search；被测对象不进查询（见 src/webcheck.ts）
+
+  // 启动一次真检测
+  if (req.method === "POST" && url.pathname === "/api/detect") {
+    let body: { query?: unknown };
+    try {
+      body = JSON.parse(await readBody(req));
+    } catch {
+      json(res, 400, { ok: false, message: "请求体不是合法 JSON" });
+      return;
+    }
+    const query = typeof body.query === "string" ? body.query.trim() : "";
+    if (!query) {
+      json(res, 400, { ok: false, message: "请输入品牌名或官网域名，如 zkoner.com" });
+      return;
+    }
+    if (query.length > 120) {
+      json(res, 400, { ok: false, message: "输入过长（最多 120 字）" });
+      return;
+    }
+
+    const ip = clientIP(req);
+    const lim = allow(ip);
+    if (!lim.ok) {
+      json(res, 429, { ok: false, message: `请求太频繁，请 ${lim.retryAfterSec} 秒后再试`, retryAfterSec: lim.retryAfterSec });
+      return;
+    }
+    try {
+      const id = await startWebCheck(query);
+      json(res, 200, { ok: true, id });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "检测启动失败，请稍后再试";
+      json(res, 429, { ok: false, message: msg });
+    }
+    return;
+  }
+
+  // 轮询真检测进度/结果（已完成且内存没有时回磁盘恢复）
+  const detectMatch = url.pathname.match(/^\/api\/detect\/([a-z0-9]+)$/i);
+  if (req.method === "GET" && detectMatch) {
+    const id = detectMatch[1];
+    const job = getWebCheck(id) ?? loadWebCheck(id);
+    if (!job) {
+      json(res, 404, { ok: false, message: "检测任务不存在或已过期" });
+      return;
+    }
+    json(res, 200, { ok: true, status: job.status, error: job.error, stage: job.stage, report: job.report });
     return;
   }
 
